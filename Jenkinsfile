@@ -5,22 +5,25 @@ pipeline {
 
         stage("Checkout code") {
             steps {
-                
-                git branch: 'main', url: 'https://github.com/Cybertemi/november_project.git'
+                git branch: 'main',
+                    url: 'https://github.com/Cybertemi/november_project.git'
             }
         }
 
         stage("Build image and push") {
             steps {
                 withCredentials([
-                    usernamePassword(credentialsId: 'DOCKER_CRED', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')
+                    usernamePassword(
+                        credentialsId: 'DOCKER_CRED',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
                 ]) {
-
-                    sh '''
-                        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-                        docker build -t $DOCKER_USERNAME/myapp:latest -f Dockerfile .
-                        docker push $DOCKER_USERNAME/myapp:latest
-                    '''
+                    sh """
+                        echo "\$DOCKER_PASSWORD" | docker login -u "\$DOCKER_USERNAME" --password-stdin
+                        docker build -t "\$DOCKER_USERNAME/myapp:latest" .
+                        docker push "\$DOCKER_USERNAME/myapp:latest"
+                    """
                 }
             }
         }
@@ -28,23 +31,31 @@ pipeline {
         stage("Deploy to EC2") {
             steps {
                 withCredentials([
-                    sshUserPrivateKey(credentialsId: 'EC2_KEY', keyFileVariable: 'EC2_KEY'),
-                    string(credentialsId: 'EC2_HOST', variable: 'EC2_HOST'),
-                    usernamePassword(credentialsId: 'DOCKER_CRED', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')
+                    sshUserPrivateKey(
+                        credentialsId: 'EC2_KEY',
+                        keyFileVariable: 'SSH_KEY'
+                    ),
+                    string(
+                        credentialsId: 'EC2_HOST',
+                        variable: 'EC2_HOST'
+                    ),
+                    usernamePassword(
+                        credentialsId: 'DOCKER_CRED',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
                 ]) {
+                    sh """
+                        chmod 600 "\$SSH_KEY"
 
-    sh """
-    chmod 600 "$SSH_KEY"
-
-    ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ubuntu@"$EC2_HOST" << EOF
-        echo "Connected to EC2"
-        export DOCKER_USERNAME="$DOCKER_USERNAME"
-        export DOCKER_PASSWORD="$DOCKER_PASSWORD"
-        cd /home/ubuntu
-        bash ~/deploy.sh
-EOF
-'''
-
+                        ssh -o StrictHostKeyChecking=no -i "\$SSH_KEY" ubuntu@"\$EC2_HOST" << EOF
+                          echo "Connected to EC2"
+                          export DOCKER_USERNAME="\$DOCKER_USERNAME"
+                          export DOCKER_PASSWORD="\$DOCKER_PASSWORD"
+                          cd /home/ubuntu
+                          bash ~/deploy.sh
+                        EOF
+                    """
                 }
             }
         }
