@@ -19,7 +19,7 @@ pipeline {
                     sh '''
                         docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
                         docker build -t $DOCKER_USERNAME/myapp:latest -f Dockerfile .
-                        docker push $DOCKER_USERNAME/main:latest
+                        docker push $DOCKER_USERNAME/myapp:latest
                     '''
                 }
             }
