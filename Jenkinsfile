@@ -5,9 +5,7 @@ pipeline {
 
         stage("Checkout code") {
             steps {
-                sshagent(['github-ssh-key']) 
-                sh 'git ls-remote git@github.com:Cybertemi/november_project.git HEAD'
-
+                
                 git branch: 'main', url: 'https://github.com/Cybertemi/november_project.git'
             }
         }
